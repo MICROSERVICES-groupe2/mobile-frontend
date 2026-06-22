@@ -31,32 +31,29 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     try {
       final queryParams = <String, dynamic>{};
       if (accountId != null) queryParams['accountId'] = accountId;
-      if (type != null) queryParams['type'] = type;
-      if (limit != null) queryParams['limit'] = limit;
-      if (offset != null) queryParams['offset'] = offset;
+      if (limit != null) queryParams['size'] = limit;
+      if (offset != null && limit != null) queryParams['page'] = (offset ~/ limit).toString();
 
       final response = await dioClient.dio.get(
         ApiConstants.transactionsPath,
         queryParameters: queryParams,
       );
 
-      // The API may return either a raw list or an object containing the list under a specific key (e.g., "data" or "transactions").
       final dynamic rawData = response.data;
       List<dynamic> data;
       if (rawData is List) {
         data = rawData;
       } else if (rawData is Map<String, dynamic>) {
-        // Try common keys that may hold the transaction list.
-        if (rawData.containsKey('transactions')) {
+        if (rawData.containsKey('content')) {
+          data = rawData['content'] as List<dynamic>;
+        } else if (rawData.containsKey('transactions')) {
           data = rawData['transactions'] as List<dynamic>;
         } else if (rawData.containsKey('data')) {
           data = rawData['data'] as List<dynamic>;
         } else {
-          // Fallback: treat the whole map as a single transaction entry.
-          data = [rawData];
+          throw ServerException('Unexpected response format');
         }
       } else {
-        // Unexpected format; throw to be caught by outer handler.
         throw ServerException('Unexpected response format');
       }
       return data.map((json) => TransactionModel.fromJson(json)).toList();

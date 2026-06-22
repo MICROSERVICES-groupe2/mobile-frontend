@@ -22,6 +22,15 @@ class SecureStorage {
     return await _storage.read(key: AppConstants.refreshTokenKey);
   }
 
+  Future<void> setBiometricEnabled(bool enabled) async {
+    await _storage.write(key: AppConstants.biometricEnabledKey, value: enabled.toString());
+  }
+
+  Future<bool> isBiometricEnabled() async {
+    final value = await _storage.read(key: AppConstants.biometricEnabledKey);
+    return value == 'true';
+  }
+
   Future<void> clearAll() async {
     await _storage.deleteAll();
   }

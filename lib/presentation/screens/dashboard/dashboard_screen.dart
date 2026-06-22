@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../design_tokens/design_tokens.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/transaction.dart';
@@ -39,24 +40,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     context.read<NotificationBloc>().add(LoadNotifications(userId: userId));
   }
 
-  void _refreshDashboardData() {
-    final authState = context.read<AuthBloc>().state;
-    final user = authState is AuthAuthenticated ? authState.user : null;
-    final clientId = user?.clientId;
-
-    context.read<AccountBloc>().add(FetchAccounts(clientId: clientId));
-
-    final accountState = context.read<AccountBloc>().state;
-    if (accountState is AccountLoaded && accountState.accounts.isNotEmpty) {
-      context.read<TransactionBloc>().add(
-        FetchTransactions(
-          accountId: accountState.accounts.first.id,
-          limit: 5,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -76,7 +59,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         BlocListener<TransactionBloc, TransactionState>(
           listener: (context, state) {
             if (state is TransactionOperationSuccess) {
-              _refreshDashboardData();
+              final authState = context.read<AuthBloc>().state;
+              final user = authState is AuthAuthenticated ? authState.user : null;
+              context.read<AccountBloc>().add(FetchAccounts(clientId: user?.clientId));
             }
           },
         ),
@@ -189,9 +174,7 @@ class _DashboardView extends StatelessWidget {
                           CircleAvatar(
                             radius: 20,
                             backgroundColor: DesignTokens.teal500,
-                            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                                ? NetworkImage(avatarUrl)
-                                : null,
+                            backgroundImage: resolveAvatar(avatarUrl),
                             child: avatarUrl == null || avatarUrl.isEmpty
                                 ? const Icon(Icons.person, color: Colors.white, size: 20)
                                 : null,
@@ -337,6 +320,29 @@ class _DashboardView extends StatelessWidget {
                   );
                 },
               ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => context.go('/accounts'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Voir tous mes comptes',
+                      style: TextStyle(
+                        color: DesignTokens.teal300.withValues(alpha: 0.8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right,
+                      color: DesignTokens.teal300.withValues(alpha: 0.8),
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 28),
 
               // Quick actions
@@ -352,6 +358,11 @@ class _DashboardView extends StatelessWidget {
                     icon: Icons.receipt_long,
                     label: 'Paiement',
                     onTap: () => context.go('/payments'),
+                  ),
+                  _QuickAction(
+                    icon: Icons.account_balance,
+                    label: 'Prêt',
+                    onTap: () => context.go('/loans'),
                   ),
                   _QuickAction(
                     icon: Icons.add_circle_outline,
@@ -449,14 +460,16 @@ class _DashboardView extends StatelessWidget {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transactions'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Prêts'),
           BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Activité'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
         ],
         onTap: (index) {
           if (index == 0) context.go('/dashboard');
           if (index == 1) context.go('/transactions');
-          if (index == 2) context.go('/activity');
-          if (index == 3) context.go('/profile');
+          if (index == 2) context.go('/loans');
+          if (index == 3) context.go('/activity');
+          if (index == 4) context.go('/profile');
         },
       ),
     );

@@ -1,14 +1,17 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/utils/image_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/biometric/biometric_service.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../design_tokens/design_tokens.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../injection_container.dart' as di;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,20 +32,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (pickedFile != null && mounted) {
+      final bytes = await pickedFile.readAsBytes();
+      if (!mounted) return;
+      final mimeType = pickedFile.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
       context.read<AuthBloc>().add(
-            UpdateProfilePictureRequested(imagePath: pickedFile.path),
+            UpdateProfilePictureRequested(bytes: bytes, mimeType: mimeType),
           );
     }
   }
 
   ImageProvider _avatarImage(String? avatarUrl) {
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      if (avatarUrl.startsWith('http')) {
-        return NetworkImage(avatarUrl);
-      }
-      return FileImage(File(avatarUrl));
-    }
-    return const NetworkImage('https://i.pravatar.cc/150?img=11');
+    final resolved = resolveAvatar(avatarUrl);
+    return resolved ?? const NetworkImage('https://i.pravatar.cc/150?img=11');
   }
 
   @override
@@ -76,7 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final user = state is AuthAuthenticated ? state.user : null;
+            final user = state is AuthAuthenticated
+                ? state.user
+                : (state is AuthProfileUpdated ? state.user : null);
             final displayName = user != null
                 ? (user.prenom?.isNotEmpty == true ? '${user.prenom} ${user.nom}' : user.nom)
                 : 'John Doe';
@@ -166,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     [
                       _buildMenuItem(Icons.person_outline, 'Personal Information', () {}),
                       _buildMenuItem(Icons.security, 'Security & 2FA', () {}),
-                      _buildMenuItem(Icons.fingerprint, 'Biometric Authentication', () {}),
+                      _buildBiometricToggle(),
                       _buildMenuItem(Icons.notifications_outlined, 'Notification Preferences', () {}),
                     ],
                   ),
@@ -237,7 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 3,
+        currentIndex: 4,
         type: BottomNavigationBarType.fixed,
         backgroundColor: DesignTokens.navy800.withValues(alpha: 0.95),
         selectedItemColor: DesignTokens.teal300,
@@ -247,16 +250,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transactions'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Prêts'),
           BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Activité'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
         ],
         onTap: (index) {
           if (index == 0) context.go('/dashboard');
           if (index == 1) context.go('/transactions');
-          if (index == 2) context.go('/activity');
-          if (index == 3) context.go('/profile');
+          if (index == 2) context.go('/loans');
+          if (index == 3) context.go('/activity');
+          if (index == 4) context.go('/profile');
         },
       ),
+    );
+  }
+
+  // ── Biometric Toggle Widget ──
+  Widget _buildBiometricToggle() {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        return FutureBuilder<bool>(
+          future: di.sl<SecureStorage>().isBiometricEnabled(),
+          builder: (context, snapshot) {
+            final enabled = snapshot.data ?? false;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: DesignTokens.teal500.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.fingerprint,
+                    color: DesignTokens.teal300,
+                    size: 20,
+                  ),
+                ),
+                title: const Text(
+                  'Biometric Authentication',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: Text(
+                  enabled ? 'Enabled' : 'Disabled',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: Switch.adaptive(
+                  value: enabled,
+                  activeTrackColor: DesignTokens.teal500.withValues(alpha: 0.5),
+                  activeThumbColor: DesignTokens.teal300,
+                  onChanged: (value) async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final storage = di.sl<SecureStorage>();
+                    if (value) {
+                      final bio = BiometricService();
+                      final available = await bio.isAvailable();
+                      if (!available) {
+                        if (mounted) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Biométrie non disponible sur cet appareil'),
+                              backgroundColor: DesignTokens.error,
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                      final auth = await bio.authenticate();
+                      if (!auth) return;
+                    }
+                    await storage.setBiometricEnabled(value);
+                    setState(() {});
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

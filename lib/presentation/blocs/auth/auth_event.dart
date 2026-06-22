@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 
 abstract class AuthEvent extends Equatable {
@@ -54,12 +55,13 @@ class VerifyOtpRequested extends AuthEvent {
 }
 
 class UpdateProfilePictureRequested extends AuthEvent {
-  final String imagePath;
+  final Uint8List bytes;
+  final String mimeType;
 
-  const UpdateProfilePictureRequested({required this.imagePath});
+  const UpdateProfilePictureRequested({required this.bytes, required this.mimeType});
 
   @override
-  List<Object?> get props => [imagePath];
+  List<Object?> get props => [bytes, mimeType];
 }
 
 class TwoFAVerified extends AuthEvent {

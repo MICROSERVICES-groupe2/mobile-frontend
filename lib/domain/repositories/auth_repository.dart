@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import '../../../core/errors/failures.dart';
 import '../entities/register_result.dart';
@@ -19,7 +20,7 @@ abstract class AuthRepository {
   Future<Either<Failure, User>> verifyRegistrationOtp(String userId, String code);
   Future<Either<Failure, User>> verify2FA(String code);
   Future<Either<Failure, User>> loginWithBiometrics();
-  Future<Either<Failure, User>> updateProfilePicture(String imagePath);
+  Future<Either<Failure, User>> updateProfilePicture(Uint8List bytes, String mimeType);
   Future<Either<Failure, void>> logout();
   Future<Either<Failure, bool>> isAuthenticated();
   Future<Either<Failure, void>> sendFcmToken(String token);

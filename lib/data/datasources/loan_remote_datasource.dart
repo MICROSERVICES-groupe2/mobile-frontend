@@ -15,10 +15,12 @@ class LoanRemoteDataSourceImpl implements LoanRemoteDataSource {
 
   LoanRemoteDataSourceImpl({required this.dioClient});
 
+  String get _loansBase => ApiConstants.loansPath;
+
   @override
   Future<List<LoanModel>> getLoans() async {
     try {
-      final response = await dioClient.dio.get(ApiConstants.loansPath);
+      final response = await dioClient.dio.get(_loansBase);
       final List<dynamic> data = response.data;
       return data.map((json) => LoanModel.fromJson(json)).toList();
     } on DioException catch (e) {
@@ -32,8 +34,11 @@ class LoanRemoteDataSourceImpl implements LoanRemoteDataSource {
   @override
   Future<LoanModel> simulateLoan(double montant, int dureeMois) async {
     try {
+      String path = ApiConstants.loansPath.endsWith('/')
+          ? '${ApiConstants.loansPath}simulate'
+          : '${ApiConstants.loansPath}/simulate';
       final response = await dioClient.dio.post(
-        '${ApiConstants.loansPath}/simulate',
+        path,
         data: {'montant': montant, 'dureeMois': dureeMois},
       );
       return LoanModel.fromJson(response.data);
@@ -49,7 +54,7 @@ class LoanRemoteDataSourceImpl implements LoanRemoteDataSource {
   Future<void> requestLoan(double montant, int dureeMois, String accountId) async {
     try {
       await dioClient.dio.post(
-        ApiConstants.loansPath,
+        _loansBase,
         data: {'montant': montant, 'dureeMois': dureeMois, 'accountId': accountId},
       );
     } on DioException catch (e) {

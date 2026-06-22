@@ -4,6 +4,7 @@ import '../../../core/errors/failures.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/repositories/account_repository.dart';
 import '../datasources/account_remote_datasource.dart';
+import '../models/create_account_request.dart';
 
 class AccountRepositoryImpl implements AccountRepository {
   final AccountRemoteDataSource remoteDataSource;
@@ -28,6 +29,31 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<Either<Failure, Account>> getAccountDetail(String accountId) async {
     try {
       final account = await remoteDataSource.getAccountDetail(accountId);
+      return Right(account);
+    } on UnauthorizedException {
+      return const Left(UnauthorizedFailure('Non autorisé. Veuillez vous reconnecter.'));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return const Left(ServerFailure('Erreur inattendue.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Account>> createAccount({
+    required String clientId,
+    required String type,
+    required double solde,
+    required String devise,
+  }) async {
+    try {
+      final request = CreateAccountRequest(
+        clientId: clientId,
+        type: type,
+        solde: solde,
+        devise: devise,
+      );
+      final account = await remoteDataSource.createAccount(request.toJson());
       return Right(account);
     } on UnauthorizedException {
       return const Left(UnauthorizedFailure('Non autorisé. Veuillez vous reconnecter.'));

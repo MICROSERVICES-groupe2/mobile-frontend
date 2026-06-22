@@ -10,6 +10,7 @@ import '../../blocs/loan/loan_state.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../design_tokens/design_tokens.dart';
 import '../../../injection_container.dart' as di;
 
 class LoansScreen extends StatefulWidget {
@@ -69,16 +70,18 @@ class _LoansScreenState extends State<LoansScreen> with SingleTickerProviderStat
           currentIndex: 2,
           type: BottomNavigationBarType.fixed,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Accueil'),
-            BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Transactions'),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
+            BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transactions'),
             BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Prêts'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+            BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Activité'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
           ],
           onTap: (index) {
             if (index == 0) context.go('/dashboard');
             if (index == 1) context.go('/transactions');
             if (index == 2) context.go('/loans');
-            if (index == 3) context.go('/profile');
+            if (index == 3) context.go('/activity');
+            if (index == 4) context.go('/profile');
           },
         ),
       ),
@@ -228,6 +231,20 @@ class _LoansScreenState extends State<LoansScreen> with SingleTickerProviderStat
                             _loanDetail('Taux', '${loan.tauxInteret}%', isDark),
                             _loanDetail('Durée', '${loan.dureeMois} mois', isDark),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () => context.push(
+                              '/loans/${loan.id}/schedule',
+                              extra: loan,
+                            ),
+                            icon: const Icon(Icons.calendar_month, size: 16, color: DesignTokens.teal300),
+                            label: const Text(
+                              'Voir l\'échéancier',
+                              style: TextStyle(color: DesignTokens.teal300, fontSize: 13),
+                            ),
+                          ),
                         ),
                         if (loan.dateProchainPaiement != null) ...[
                           const SizedBox(height: 12),

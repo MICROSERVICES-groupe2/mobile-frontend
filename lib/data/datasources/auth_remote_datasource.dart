@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
 
@@ -21,7 +22,7 @@ abstract class AuthRemoteDataSource {
   Future<Map<String, dynamic>> verifyRegistrationOtp(String userId, String code);
   Future<Map<String, dynamic>> verify2FA(String code);
   Future<Map<String, dynamic>> loginWithBiometrics(String token);
-  Future<Map<String, dynamic>> updateProfilePicture(String imagePath);
+  Future<Map<String, dynamic>> updateProfilePicture(Uint8List bytes, String mimeType);
   Future<void> sendFcmToken(String token);
 }
 
@@ -161,18 +162,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> updateProfilePicture(String imagePath) async {
+  Future<Map<String, dynamic>> updateProfilePicture(Uint8List bytes, String mimeType) async {
     try {
-      final formData = FormData.fromMap({
-        'avatar': await MultipartFile.fromFile(
-          imagePath,
-          filename: imagePath.split('/').last,
-        ),
-      });
+      final base64Image = base64Encode(bytes);
+      final dataUri = 'data:$mimeType;base64,$base64Image';
 
       final response = await dioClient.dio.post(
         '${ApiConstants.authPath}/avatar',
-        data: formData,
+        data: {'avatarUrl': dataUri},
       );
 
       return response.data;

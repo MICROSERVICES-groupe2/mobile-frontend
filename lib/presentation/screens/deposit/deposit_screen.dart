@@ -105,19 +105,9 @@ class _DepositScreenState extends State<DepositScreen> {
               backgroundColor: DesignTokens.success,
             ),
           );
-          // Refresh account list and the selected account transactions
           final authState = context.read<AuthBloc>().state;
           final user = authState is AuthAuthenticated ? authState.user : null;
           context.read<AccountBloc>().add(FetchAccounts(clientId: user?.clientId));
-          if (_selectedAccount != null) {
-            context.read<TransactionBloc>().add(
-              FetchTransactions(
-                accountId: _selectedAccount!.id,
-                limit: 20,
-              ),
-            );
-          }
-          // Back to dashboard
           context.go('/dashboard');
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -282,7 +272,7 @@ class _DepositScreenState extends State<DepositScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,

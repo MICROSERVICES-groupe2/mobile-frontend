@@ -5,6 +5,8 @@ import '../../../domain/usecases/transactions/get_transactions_usecase.dart';
 
 abstract class TransactionEvent {}
 
+class ResetTransactions extends TransactionEvent {}
+
 class FetchTransactions extends TransactionEvent {
   final String? accountId;
   final String? type;
@@ -92,6 +94,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     required this.createDepositUseCase,
     required this.createWithdrawalUseCase,
   }) : super(TransactionInitial()) {
+    on<ResetTransactions>((event, emit) => emit(TransactionInitial()));
     on<FetchTransactions>(_onFetchTransactions);
     on<CreateTransfer>(_onCreateTransfer);
     on<CreateDeposit>(_onCreateDeposit);
@@ -130,8 +133,10 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       (failure) async => emit(TransactionError(failure.toString())),
       (_) async {
         emit(TransactionOperationSuccess('Transfert effectué avec succès'));
-        // Refresh transactions
-        final refreshResult = await getTransactionsUseCase.execute();
+        final refreshResult = await getTransactionsUseCase.execute(
+          accountId: event.sourceAccountId,
+          limit: 20,
+        );
         refreshResult.fold(
           (f) => emit(TransactionError(f.toString())),
           (txs) => emit(TransactionsLoaded(txs)),
@@ -180,8 +185,10 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       (failure) async => emit(TransactionError(failure.toString())),
       (_) async {
         emit(TransactionOperationSuccess('Paiement effectué avec succès'));
-        // Refresh transactions list
-        final refreshResult = await getTransactionsUseCase.execute();
+        final refreshResult = await getTransactionsUseCase.execute(
+          accountId: event.accountId,
+          limit: 20,
+        );
         refreshResult.fold(
           (f) => emit(TransactionError(f.toString())),
           (txs) => emit(TransactionsLoaded(txs)),

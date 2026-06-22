@@ -7,6 +7,7 @@ import '../models/account_model.dart';
 abstract class AccountRemoteDataSource {
   Future<List<AccountModel>> getAccounts({String? clientId});
   Future<AccountModel> getAccountDetail(String accountId);
+  Future<AccountModel> createAccount(Map<String, dynamic> request);
 }
 
 class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
@@ -53,6 +54,24 @@ class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
   Future<AccountModel> getAccountDetail(String accountId) async {
     try {
       final response = await dioClient.dio.get('${ApiConstants.accountsPath}/$accountId');
+      return AccountModel.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw UnauthorizedException();
+      }
+      throw ServerException(e.message ?? 'Unknown Error');
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<AccountModel> createAccount(Map<String, dynamic> request) async {
+    try {
+      final response = await dioClient.dio.post(
+        ApiConstants.accountsPath,
+        data: request,
+      );
       return AccountModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {

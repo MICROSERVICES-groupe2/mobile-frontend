@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/biometric/biometric_service.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../design_tokens/design_tokens.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
@@ -11,6 +12,7 @@ import '../../widgets/common/app_logo.dart';
 import '../../widgets/common/glass_button.dart';
 import '../../widgets/common/glass_container.dart';
 import '../../widgets/common/glass_text_field.dart';
+import '../../../injection_container.dart' as di;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,10 +48,62 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _checkBiometrics() async {
     final available = await _biometricService.isAvailable();
+    final storage = di.sl<SecureStorage>();
+    final enrolled = await storage.isBiometricEnabled();
     if (mounted) {
       setState(() {
-        _biometricAvailable = available;
+        _biometricAvailable = available && enrolled;
       });
+    }
+  }
+
+  Future<void> _askEnableBiometrics() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final available = await _biometricService.isAvailable();
+    if (!available || !mounted) return;
+    final storage = di.sl<SecureStorage>();
+    final alreadyEnabled = await storage.isBiometricEnabled();
+    if (alreadyEnabled) return;
+    if (!mounted) return;
+
+    if (!mounted) return;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: DesignTokens.navy800,
+        title: const Text(
+          'Activer la biométrie ?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Utilisez votre empreinte digitale ou Face ID pour vous connecter plus rapidement.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Non merci'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: DesignTokens.teal300),
+            child: const Text('Activer'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      await storage.setBiometricEnabled(true);
+      setState(() => _biometricAvailable = true);
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Biométrie activée'),
+            backgroundColor: DesignTokens.success,
+          ),
+        );
+      }
     }
   }
 
@@ -86,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else if (state is AuthRequires2FA) {
             context.go('/login/2fa');
           } else if (state is AuthAuthenticated) {
+            _askEnableBiometrics();
             context.go('/dashboard');
           }
         },

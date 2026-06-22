@@ -99,7 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final result = await updateProfilePictureUseCase.execute(event.imagePath);
+    final result = await updateProfilePictureUseCase.execute(event.bytes, event.mimeType);
 
     result.fold(
       (failure) => emit(AuthError(failure.message)),

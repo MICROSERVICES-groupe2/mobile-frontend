@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import '../../../core/errors/failures.dart';
 import '../../entities/user.dart';
@@ -8,7 +9,7 @@ class UpdateProfilePictureUseCase {
 
   UpdateProfilePictureUseCase(this.repository);
 
-  Future<Either<Failure, User>> execute(String imagePath) async {
-    return await repository.updateProfilePicture(imagePath);
+  Future<Either<Failure, User>> execute(Uint8List bytes, String mimeType) async {
+    return await repository.updateProfilePicture(bytes, mimeType);
   }
 }

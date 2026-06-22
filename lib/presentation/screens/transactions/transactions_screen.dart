@@ -204,14 +204,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transactions'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Prêts'),
           BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Activité'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
         ],
         onTap: (index) {
           if (index == 0) context.go('/dashboard');
           if (index == 1) context.go('/transactions');
-          if (index == 2) context.go('/activity');
-          if (index == 3) context.go('/profile');
+          if (index == 2) context.go('/loans');
+          if (index == 3) context.go('/activity');
+          if (index == 4) context.go('/profile');
         },
       ),
     );
@@ -293,7 +295,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -12,6 +12,8 @@ import 'presentation/blocs/loan/loan_bloc.dart';
 import 'presentation/blocs/notification/notification_bloc.dart';
 import 'presentation/blocs/accounts/account_bloc.dart';
 import 'presentation/blocs/transactions/transaction_bloc.dart';
+import 'domain/entities/account.dart';
+import 'domain/entities/loan.dart';
 import 'domain/entities/transaction.dart';
 
 import 'presentation/screens/splash/splash_screen.dart';
@@ -21,14 +23,19 @@ import 'presentation/screens/auth/register_screen.dart';
 import 'presentation/screens/auth/register_otp_screen.dart';
 import 'presentation/screens/dashboard/dashboard_screen.dart';
 import 'presentation/screens/loans/loans_screen.dart';
+import 'presentation/screens/loans/repayment_schedule_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/transactions/transactions_screen.dart';
 import 'presentation/screens/transactions/transaction_detail_screen.dart';
 import 'presentation/screens/notifications/notifications_screen.dart';
+import 'presentation/screens/accounts/create_account_screen.dart';
+import 'presentation/screens/accounts/account_list_screen.dart';
+import 'presentation/screens/accounts/account_detail_screen.dart';
 import 'presentation/screens/transfer/transfer_screen.dart';
 import 'presentation/screens/deposit/deposit_screen.dart';
 import 'presentation/screens/payments/payments_screen.dart';
 import 'presentation/screens/activity/activity_screen.dart';
+import 'presentation/widgets/notification_banner.dart';
 
 class BankPlatformApp extends StatelessWidget {
   const BankPlatformApp({super.key});
@@ -84,6 +91,15 @@ class BankPlatformApp extends StatelessWidget {
             create: (_) => di.sl<LoanBloc>(),
             child: const LoansScreen(),
           ),
+          routes: [
+            GoRoute(
+              path: ':id/schedule',
+              builder: (context, state) {
+                final loan = state.extra as Loan;
+                return RepaymentScheduleScreen(loan: loan);
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: '/profile',
@@ -121,6 +137,24 @@ class BankPlatformApp extends StatelessWidget {
         GoRoute(
           path: '/activity',
           builder: (context, state) => const ActivityScreen(),
+        ),
+        GoRoute(
+          path: '/accounts',
+          builder: (context, state) => const AccountListScreen(),
+          routes: [
+            GoRoute(
+              path: 'create',
+              builder: (context, state) => const CreateAccountScreen(),
+            ),
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                final accountId = state.pathParameters['id'] ?? '';
+                final account = state.extra as Account?;
+                return AccountDetailScreen(accountId: accountId, account: account);
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: '/notifications',
@@ -170,17 +204,25 @@ class BankPlatformApp extends StatelessWidget {
             ],
             child: BlocListener<AuthBloc, AuthState>(
               listener: (context, state) {
+                if (state is AuthAuthenticated) {
+                  context.read<TransactionBloc>().add(ResetTransactions());
+                  context.read<AccountBloc>().add(const ResetAccounts());
+                }
                 if (state is AuthUnauthenticated) {
+                  context.read<TransactionBloc>().add(ResetTransactions());
+                  context.read<AccountBloc>().add(const ResetAccounts());
                   router.go('/login');
                 }
               },
-              child: MaterialApp.router(
-                title: 'Bank App',
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: ThemeMode.dark,
-                routerConfig: router,
-                debugShowCheckedModeBanner: false,
+              child: NotificationBanner(
+                child: MaterialApp.router(
+                  title: 'Bank App',
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: ThemeMode.dark,
+                  routerConfig: router,
+                  debugShowCheckedModeBanner: false,
+                ),
               ),
             ),
           );

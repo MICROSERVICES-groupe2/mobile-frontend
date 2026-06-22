@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/errors/failures.dart';
@@ -136,9 +137,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, User>> updateProfilePicture(String imagePath) async {
+  Future<Either<Failure, User>> updateProfilePicture(Uint8List bytes, String mimeType) async {
     try {
-      final response = await remoteDataSource.updateProfilePicture(imagePath);
+      final response = await remoteDataSource.updateProfilePicture(bytes, mimeType);
       final user = UserModel.fromJson(response['user'] ?? {});
       return Right(user);
     } on UnauthorizedException {

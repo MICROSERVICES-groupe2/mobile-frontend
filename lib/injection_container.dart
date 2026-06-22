@@ -23,6 +23,7 @@ import 'domain/usecases/loans/loan_usecases.dart';
 import 'domain/usecases/notifications/notification_usecases.dart';
 import 'domain/usecases/transactions/get_transactions_usecase.dart';
 import 'domain/usecases/transactions/create_transfer_usecase.dart';
+import 'domain/usecases/accounts/create_account_usecase.dart';
 
 // Repositories
 import 'domain/repositories/auth_repository.dart';
@@ -58,7 +59,7 @@ Future<void> initDependencies() async {
         verify2faUseCase: sl(),
         loginWithBiometricsUseCase: sl(),
       ));
-  sl.registerFactory(() => AccountBloc(sl()));
+  sl.registerFactory(() => AccountBloc(sl(), createAccountUseCase: sl()));
   sl.registerFactory(() => TransactionBloc(
         getTransactionsUseCase: sl(),
         createTransferUseCase: sl(),
@@ -94,6 +95,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => CreateTransferUseCase(sl()));
   sl.registerLazySingleton(() => CreateDepositUseCase(sl()));
   sl.registerLazySingleton(() => CreateWithdrawalUseCase(sl()));
+  sl.registerLazySingleton(() => CreateAccountUseCase(sl()));
 
   // Repositories
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(remoteDataSource: sl(), secureStorage: sl()));
